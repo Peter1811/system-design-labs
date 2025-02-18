@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Сервис с FastAPI
+  fastapi:
+    build: .
+    container_name: fastapi-app
+    restart: always
+    hostname: 0.0.0.0
+    ports:
+      - "8000:80"  # Пробрасываем порт 80 внутри контейнера на порт 8000 на хосте
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      - postgres  # FastAPI контейнер зависит от контейнера с PostgreSQL
+    volumes:
+      - .:/app  # Привязка локальной директории с кодом FastAPI к контейнеру
+
+  # Сервис с PostgreSQL
+  postgres:
+    image: postgres:13
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres  # Имя базы данных, которая будет создана
+    ports:
+      - "5432:5432"  # Пробрасываем порт 5432 внутри контейнера на порт 5432 на хосте
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Постоянное хранилище данных PostgreSQL
+
+# Определение тома для постоянных данных PostgreSQL
+volumes:
+  postgres_data:
+    driver: local
