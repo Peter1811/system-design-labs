@@ -13,7 +13,7 @@ DB_NAME = 'postgres'
 DB_USER = 'postgres'
 DB_PASSWORD = '1811'
 
-DATABASE_URL = f'postgresql+psycopg2://postgres:postgres@postgres:5432/postgres'
+DATABASE_URL = f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
