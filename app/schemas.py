@@ -13,5 +13,5 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: str
+    login: str
     password: str

@@ -10,5 +10,3 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем приложение внутрь контейнера
 COPY ./app /app
-
-CMD ["uvicorn", "main:app", "--reload"]

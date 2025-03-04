@@ -56,7 +56,7 @@ def login_for_access_token(form_data: UserLogin = Depends(),
     Получение токена.
     '''
 
-    user = db.query(User).filter(User.email == form_data.email).first()
+    user = db.query(User).filter(User.login == form_data.login).first()
 
     if not user:
         return {'error': 'Такого пользователя нет в базе'}
@@ -66,7 +66,7 @@ def login_for_access_token(form_data: UserLogin = Depends(),
     if not verify_password(form_data.password, hashed_password):
         return {'error': 'Неверный пароль'}
     
-    access_token = create_access_token({'sub': user.email})
+    access_token = create_access_token({'sub': user.login})
 
     return {'access_token': access_token, 'token_type': 'bearer'}
 
