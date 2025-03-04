@@ -1,22 +1,10 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
-from sqlalchemy import create_engine
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy.orm import DeclarativeBase, declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship
+
 
 class Base(DeclarativeBase):
     pass
-
-
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'postgres'
-DB_USER = 'postgres'
-DB_PASSWORD = '1811'
-
-DATABASE_URL = f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
 
 
 class Presentation(Base):
@@ -43,7 +31,8 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True)
+    is_superuser = Column(Boolean, default=False)
+    login = Column(String, unique=True)
     first_name = Column(String)
     last_name = Column(String)
     hashed_password = Column(String)

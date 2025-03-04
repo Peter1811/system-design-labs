@@ -5,12 +5,11 @@ from sqlalchemy.orm import Session
 from typing import Any, Union
 
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token
-from app.models import Presentation, engine, Base, SessionLocal, User
+from app.db_config import SessionLocal
+from app.models import Conference, Presentation, User
 from app.schemas import PresentationCreate, UserCreate, UserLogin
 
 app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
 
 
 def get_db():
@@ -21,7 +20,12 @@ def get_db():
         db.close()
 
 
-@app.post('/create_user/')
+@app.get('/')
+def main():
+    return {'main page': 'main information'}
+
+
+@app.post('/create_user')
 def register(user: UserCreate, 
              db: Session = Depends(get_db)):
     '''
@@ -45,9 +49,9 @@ def register(user: UserCreate,
     return new_user
 
 
-@app.post('/get_token')
+@app.post('/login')
 def login_for_access_token(form_data: UserLogin = Depends(),
-                           db: Session = Depends(get_db)) -> dict[str, str]:
+                           db: Session = Depends(get_db)):
     '''
     Получение токена.
     '''
@@ -57,7 +61,9 @@ def login_for_access_token(form_data: UserLogin = Depends(),
     if not user:
         return {'error': 'Такого пользователя нет в базе'}
     
-    if not verify_password:
+    hashed_password = user.hashed_password
+    
+    if not verify_password(form_data.password, hashed_password):
         return {'error': 'Неверный пароль'}
     
     access_token = create_access_token({'sub': user.email})
@@ -65,7 +71,38 @@ def login_for_access_token(form_data: UserLogin = Depends(),
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
-@app.post('/add_presentation/')
+@app.get('/get_user_by_login')
+def get_user_by_login(login: str, db: Session = Depends(get_db)):
+    '''
+    Поиск пользователя по логину.
+    '''
+
+    user = db.query(User).filter(User.email == login).first()
+
+    if not user:
+        return {'error': 'Пользователя с таким логином нет в базе данных'}
+    
+    return user
+
+
+@app.get('/get_user_by_name')
+def get_user_by_name(first_name: str, last_name: str,
+                     db: Session = Depends(get_db)):
+    '''
+    Поиск пользователя по маске имя и фамилия.
+    '''
+
+    user = db.query(User).filter(User.first_name == first_name, 
+                                 User.last_name == last_name).first()
+    
+    if not user:
+        return {'error': 'Пользователя с такими именем \
+                и фамилией нет в базе данных'}
+    
+    return user
+
+
+@app.post('/add_presentation')
 def add_presentation(pres: PresentationCreate, 
                      db: Session = Depends(get_db)):
     '''
@@ -86,7 +123,7 @@ def add_presentation(pres: PresentationCreate,
     return new_pres
 
 
-@app.get('/get_presentations/')
+@app.get('/get_presentations')
 def get_presentations(db: Session = Depends(get_db)):
     '''
     Получение списка всех добавленных докладов.
@@ -103,13 +140,31 @@ def get_presentations(db: Session = Depends(get_db)):
     return result
 
 
+@app.post('/add_pres_to_conf')
+def add_presentation_to_conference(presentation_id: int,
+                                   conference_id: int,
+                                   db: Session = Depends(get_db)):
+    '''
+    Добавление доклада в конференцию.
+    '''
 
-@app.get('/get_presentations/')
-def get_presentations(db: Session = Depends(get_db)):
-    presentations = db.query(Presentation).all()
+    presentation = db.query(Presentation).get(presentation_id)
+    conference = db.query(Conference).get(conference_id)
 
-    return presentations
+    if not presentation:
+        return {'error': 'Доклада с таким id нет в базе данных'}
+    
+    if not conference:
+        return {'error': 'Конференции с таким id нет в базе данных'}
+    
+    presentation.conference_id = conference_id
 
-# @app.post('/register/')
-# def register_user()
+    db.commit()
+    db.refresh(presentation)
 
+    return True
+
+
+@app.get('/test')
+def test(a: str):
+    return {'a': a}
