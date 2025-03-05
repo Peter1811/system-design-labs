@@ -34,10 +34,10 @@ def register(user: UserCreate,
 
     hashed_password = hash_password(user.password)
 
-    if db.query(User).filter(User.email == user.email).first():
+    if db.query(User).filter(User.login == user.login).first():
         return {'error': 'Пользователь с такой почтой уже существует'}
     
-    new_user = User(email=user.email,
+    new_user = User(login=user.login,
                     first_name=user.first_name,
                     last_name=user.last_name,
                     hashed_password=hashed_password)
@@ -77,7 +77,7 @@ def get_user_by_login(login: str, db: Session = Depends(get_db)):
     Поиск пользователя по логину.
     '''
 
-    user = db.query(User).filter(User.email == login).first()
+    user = db.query(User).filter(User.login == login).first()
 
     if not user:
         return {'error': 'Пользователя с таким логином нет в базе данных'}

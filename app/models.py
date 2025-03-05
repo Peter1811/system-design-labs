@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, TIMESTAMP, func
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Boolean, TIMESTAMP, Index
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -11,7 +11,7 @@ class Presentation(Base):
     __tablename__ = 'presentations'
     
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
+    name = Column(String, unique=True, index=True)
     description = Column(Text)
     conference_id = Column(Integer, ForeignKey('conferences.id'))
 
@@ -22,7 +22,8 @@ class Conference(Base):
     __tablename__ = 'conferences'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, index=True)
+    description = Column(String)
 
     presentations = relationship('Presentation', back_populates='host_conference')
 
@@ -32,8 +33,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     is_superuser = Column(Boolean, default=False)
-    login = Column(String, unique=True)
+    login = Column(String, unique=True, index=True)
     first_name = Column(String)
     last_name = Column(String)
     hashed_password = Column(String)
-    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index('ix_users_first_name_last_email', 'first_name', 'last_name'),
+    )
