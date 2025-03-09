@@ -46,7 +46,7 @@ def create_access_token(data: dict) -> str:
 
     to_encode = data.copy()
     expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({'exp': str(expire)})
+    to_encode.update({'exp': expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -63,7 +63,13 @@ def decode_access_token(token: str):
         return payload
     
     except jwt.ExpiredSignatureError:
-        return None
+        return {'error': 'Токен просрочен'}
     
     except jwt.PyJWTError:
-        return None
+        return {'error': 'Токен не является валидным'}
+    
+
+def get_current_user_login(token: str):
+    payload = decode_access_token(token)
+    if payload.get('sub'):
+        return payload['sub']
