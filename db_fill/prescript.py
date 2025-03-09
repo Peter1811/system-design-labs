@@ -1,6 +1,7 @@
 from app.auth import hash_password
 from app.db_config import SessionLocal
 from app.models import User, Presentation, Conference
+from app.mongo_config import mongo_presentations
 
 session = SessionLocal()
 
@@ -13,6 +14,7 @@ admin = User(is_superuser=True,
 
 session.add(admin)
 
+mongo_presentations.create_index([('name', 'text')])
 
 # создание конференций
 conferences = {
@@ -30,63 +32,143 @@ conferences = {
 
 presentations = {
     "PyCon": [
-        {"title": "Python 3.10: New Features and Best Practices", "description": "Обзор новых возможностей в Python 3.10 и рекомендации по их использованию в реальных проектах."},
-        {"title": "Machine Learning with TensorFlow and Python", "description": "Как использовать TensorFlow для разработки моделей машинного обучения с использованием Python."},
-        {"title": "Asynchronous Programming in Python: A Deep Dive", "description": "Подробное изучение асинхронного программирования в Python с использованием `asyncio`, `aiohttp` и других библиотек."},
+        {"title": "Python 3.10: New Features and Best Practices", 
+         "description": "Обзор новых возможностей в Python 3.10 и рекомендации по их использованию в реальных проектах.",
+         "text": "В этой презентации мы рассмотрим нововведения в Python 3.10, включая улучшения синтаксиса, поддержку новых типов данных, а также советы по эффективному использованию этих возможностей в реальных проектах."},
+        
+        {"title": "Machine Learning with TensorFlow and Python", 
+         "description": "Как использовать TensorFlow для разработки моделей машинного обучения с использованием Python.",
+         "text": "В этом докладе мы расскажем, как использовать TensorFlow и Python для построения и тренировки моделей машинного обучения. Рассмотрим основы библиотеки TensorFlow, создание нейронных сетей и примеры применения."},
+        
+        {"title": "Asynchronous Programming in Python: A Deep Dive", 
+         "description": "Подробное изучение асинхронного программирования в Python с использованием `asyncio`, `aiohttp` и других библиотек.",
+         "text": "Этот доклад посвящён углубленному изучению асинхронного программирования в Python. Мы поговорим о `asyncio`, `aiohttp` и других инструментах для реализации асинхронных операций в Python, а также разберём лучшие практики."},
     ],
     
     "Google I/O": [
-        {"title": "Building Progressive Web Apps with Firebase", "description": "Как создать прогрессивные веб-приложения с использованием Firebase для хранения данных и аутентификации."},
-        {"title": "Introduction to Android Jetpack Compose", "description": "Обзор нового подхода к разработке UI в Android с использованием Jetpack Compose."},
-        {"title": "AI and ML with Google Cloud: From Idea to Production", "description": "Как использовать инструменты и сервисы Google Cloud для разработки, развертывания и масштабирования моделей машинного обучения."},
+        {"title": "Building Progressive Web Apps with Firebase", 
+         "description": "Как создать прогрессивные веб-приложения с использованием Firebase для хранения данных и аутентификации.",
+         "text": "Этот доклад охватывает основы создания прогрессивных веб-приложений (PWA) с использованием Firebase. Мы рассмотрим, как интегрировать Firebase для хранения данных, аутентификации пользователей и других функций."},
+        
+        {"title": "Introduction to Android Jetpack Compose", 
+         "description": "Обзор нового подхода к разработке UI в Android с использованием Jetpack Compose.",
+         "text": "В этом докладе мы познакомим вас с Jetpack Compose, новым инструментом для разработки интерфейсов в Android. Мы покажем, как легко и быстро создавать UI с использованием декларативного подхода."},
+        
+        {"title": "AI and ML with Google Cloud: From Idea to Production", 
+         "description": "Как использовать инструменты и сервисы Google Cloud для разработки, развертывания и масштабирования моделей машинного обучения.",
+         "text": "Этот доклад расскажет о том, как разрабатывать и развёртывать модели машинного обучения с использованием инструментов Google Cloud, включая Google AI Platform и BigQuery для работы с большими данными."},
     ],
     
     "WWDC (Apple Worldwide Developers Conference)": [
-        {"title": "What's New in Swift 5.5", "description": "Изучаем новшества в языке программирования Swift 5.5, включая улучшения работы с асинхронностью и новые синтаксические возможности."},
-        {"title": "Developing for ARKit: Building Augmented Reality Apps", "description": "Как создавать приложения дополненной реальности для iOS с использованием ARKit и других инструментов."},
-        {"title": "Exploring New Features in iOS 15", "description": "Обзор новых функций iOS 15, включая улучшения в безопасности, интерфейсе и интеграции с Siri."},
+        {"title": "What's New in Swift 5.5", 
+         "description": "Изучаем новшества в языке программирования Swift 5.5, включая улучшения работы с асинхронностью и новые синтаксические возможности.",
+         "text": "В этом докладе мы рассмотрим новшества в языке Swift 5.5, включая улучшения в поддержке асинхронных операций, новые синтаксические конструкции и улучшение производительности."},
+        
+        {"title": "Developing for ARKit: Building Augmented Reality Apps", 
+         "description": "Как создавать приложения дополненной реальности для iOS с использованием ARKit и других инструментов.",
+         "text": "Доклад расскажет, как разработать приложение для дополненной реальности с использованием ARKit, а также использовать инструменты для создания реалистичных AR-эффектов на устройствах iOS."},
+        
+        {"title": "Exploring New Features in iOS 15", 
+         "description": "Обзор новых функций iOS 15, включая улучшения в безопасности, интерфейсе и интеграции с Siri.",
+         "text": "В этом докладе мы обсудим все новые функции iOS 15, включая улучшения безопасности, новые возможности в интерфейсе и улучшенную интеграцию с Siri для более эффективного взаимодействия с устройствами Apple."},
     ],
     
     "Microsoft Build": [
-        {"title": "Building Cloud-Native Applications with Azure", "description": "Как использовать платформу Microsoft Azure для создания облачных решений и масштабируемых приложений."},
-        {"title": "Improving Developer Productivity with GitHub Actions", "description": "Как автоматизировать CI/CD процессы с использованием GitHub Actions для ускорения разработки."},
-        {"title": "Creating Cross-Platform Apps with .NET 6", "description": "Как разработать кроссплатформенные приложения с использованием .NET 6 и Blazor."},
+        {"title": "Building Cloud-Native Applications with Azure", 
+         "description": "Как использовать платформу Microsoft Azure для создания облачных решений и масштабируемых приложений.",
+         "text": "Этот доклад расскажет о лучших практиках разработки облачных приложений с использованием Microsoft Azure. Мы обсудим архитектуру cloud-native, автоматизацию и масштабируемость решений."},
+        
+        {"title": "Improving Developer Productivity with GitHub Actions", 
+         "description": "Как автоматизировать CI/CD процессы с использованием GitHub Actions для ускорения разработки.",
+         "text": "Мы рассмотрим, как с помощью GitHub Actions можно автоматизировать процессы CI/CD, улучшить разработку и повысить продуктивность команды за счет интеграции с различными инструментами."},
+        
+        {"title": "Creating Cross-Platform Apps with .NET 6", 
+         "description": "Как разработать кроссплатформенные приложения с использованием .NET 6 и Blazor.",
+         "text": "Доклад посвящен созданию кроссплатформенных приложений с использованием .NET 6 и Blazor. Мы покажем, как создавать веб-приложения, которые работают на всех платформах, используя современные возможности .NET."},
     ],
     
     "Black Hat": [
-        {"title": "Exploiting Zero-Day Vulnerabilities in Web Applications", "description": "Анализ уязвимостей нулевого дня в веб-приложениях и способы защиты от них."},
-        {"title": "Advanced Threat Hunting Techniques", "description": "Техники обнаружения и анализа сложных киберугроз в корпоративных системах."},
-        {"title": "Ransomware: Anatomy of an Attack", "description": "Как работают современные атаки с использованием программ-вымогателей и как от них защититься."},
+        {"title": "Exploiting Zero-Day Vulnerabilities in Web Applications", 
+         "description": "Анализ уязвимостей нулевого дня в веб-приложениях и способы защиты от них.",
+         "text": "В этом докладе мы разберем реальные примеры уязвимостей нулевого дня в веб-приложениях, способы их эксплуатации и методы защиты от таких угроз."},
+        
+        {"title": "Advanced Threat Hunting Techniques", 
+         "description": "Техники обнаружения и анализа сложных киберугроз в корпоративных системах.",
+         "text": "Доклад о передовых методах охоты за угрозами в кибербезопасности. Мы покажем, как использовать анализ сетевого трафика, системы мониторинга и данные для выявления сложных атак."},
+        
+        {"title": "Ransomware: Anatomy of an Attack", 
+         "description": "Как работают современные атаки с использованием программ-вымогателей и как от них защититься.",
+         "text": "Этот доклад посвящен анализу современных атак с использованием программ-вымогателей. Мы рассмотрим методы защиты и отклика на такие инциденты в корпоративных сетях."},
     ],
     
     "DockerCon": [
-        {"title": "Docker for DevOps: Simplifying the CI/CD Pipeline", "description": "Как использовать Docker для упрощения процесса CI/CD и создания эффективных DevOps-процессов."},
-        {"title": "Scaling Kubernetes with Helm Charts", "description": "Как использовать Helm для управления приложениями и масштабирования в Kubernetes."},
-        {"title": "Securing Docker Containers: Best Practices", "description": "Лучшие практики по безопасности контейнеров Docker и защите от возможных угроз."},
+        {"title": "Docker for DevOps: Simplifying the CI/CD Pipeline", 
+         "description": "Как использовать Docker для упрощения процесса CI/CD и создания эффективных DevOps-процессов.",
+         "text": "Доклад об использовании Docker для создания эффективных CI/CD пайплайнов. Мы обсудим автоматизацию тестирования, сборки и развертывания приложений с Docker и Kubernetes."},
+        
+        {"title": "Scaling Kubernetes with Helm Charts", 
+         "description": "Как использовать Helm для управления приложениями и масштабирования в Kubernetes.",
+         "text": "В этом докладе мы покажем, как с помощью Helm можно упростить управление приложениями в Kubernetes и обеспечить их масштабируемость."},
+        
+        {"title": "Securing Docker Containers: Best Practices", 
+         "description": "Лучшие практики по безопасности контейнеров Docker и защите от возможных угроз.",
+         "text": "Доклад о лучших практиках безопасности для контейнеров Docker. Мы обсудим уязвимости контейнеров и способы их устранения, включая управление доступом и использование безопасных образов."},
     ],
     
     "KubeCon + CloudNativeCon": [
-        {"title": "Building Cloud-Native Applications with Kubernetes", "description": "Как разрабатывать облачные приложения с использованием Kubernetes и других современных инструментов."},
-        {"title": "Service Mesh with Istio: A Hands-On Introduction", "description": "Как внедрить и настроить сервисную сетку с помощью Istio для улучшения связи между сервисами."},
-        {"title": "Scaling Kubernetes: From Development to Production", "description": "Лучшие практики для масштабирования Kubernetes-решений с учётом производительности и надежности."},
+        {"title": "Building Cloud-Native Applications with Kubernetes", 
+         "description": "Как разрабатывать облачные приложения с использованием Kubernetes и других современных инструментов.",
+         "text": "Мы обсудим, как создавать облачные приложения с использованием Kubernetes и современных решений для управления контейнерами, а также рассмотрим лучшие практики разработки."},
+        
+        {"title": "Service Mesh with Istio: A Hands-On Introduction", 
+         "description": "Как внедрить и настроить сервисную сетку с помощью Istio для улучшения связи между сервисами.",
+         "text": "Доклад о внедрении сервисной сетки с помощью Istio для управления микросервисами. Мы рассмотрим, как настроить Istio для мониторинга, маршрутизации и безопасности."},
+        
+        {"title": "Scaling Kubernetes: From Development to Production", 
+         "description": "Лучшие практики для масштабирования Kubernetes-решений с учётом производительности и надежности.",
+         "text": "В этом докладе мы поделимся лучшими практиками масштабирования приложений на Kubernetes, а также рассмотрим проблемы производительности и надежности в продакшн-средах."},
     ],
     
     "AWS re:Invent": [
-        {"title": "Building Serverless Applications with AWS Lambda", "description": "Как создать серверлес-приложения с использованием AWS Lambda и других связанных сервисов."},
-        {"title": "Optimizing AWS Costs: Best Practices and Tools", "description": "Как эффективно управлять расходами на AWS и использовать инструменты для их оптимизации."},
-        {"title": "Machine Learning at Scale with Amazon SageMaker", "description": "Как разрабатывать и масштабировать модели машинного обучения с использованием Amazon SageMaker."},
+        {"title": "Building Serverless Applications with AWS Lambda", 
+         "description": "Как создать серверлес-приложения с использованием AWS Lambda и других связанных сервисов.",
+         "text": "Доклад о создании серверлес-приложений с AWS Lambda. Мы рассмотрим, как использовать Lambda для обработки событий, взаимодействовать с другими сервисами AWS и улучшать масштабируемость."},
+        
+        {"title": "Optimizing AWS Costs: Best Practices and Tools", 
+         "description": "Как эффективно управлять расходами на AWS и использовать инструменты для их оптимизации.",
+         "text": "Мы обсудим лучшие практики управления затратами на AWS, включая использование инструментов для оптимизации ресурсов, оценки потребностей и мониторинга расходов."},
+        
+        {"title": "Machine Learning at Scale with Amazon SageMaker", 
+         "description": "Как разрабатывать и масштабировать модели машинного обучения с использованием Amazon SageMaker.",
+         "text": "Доклад о масштабировании машинного обучения с использованием Amazon SageMaker. Мы расскажем, как разработать и развернуть модели ML с учетом производительности и масштабируемости."},
     ],
     
     "DevOpsDays": [
-        {"title": "Continuous Integration and Continuous Delivery: Best Practices", "description": "Обзор лучших практик CI/CD для улучшения автоматизации и качества разработки."},
-        {"title": "Monitoring and Observability in Modern DevOps", "description": "Как использовать мониторинг и инструменты наблюдаемости для управления системами и приложениями в DevOps."},
-        {"title": "Microservices in DevOps: Challenges and Solutions", "description": "Как внедрить и поддерживать микросервисы в рамках DevOps-подхода."},
+        {"title": "Continuous Integration and Continuous Delivery: Best Practices", 
+         "description": "Обзор лучших практик CI/CD для улучшения автоматизации и качества разработки.",
+         "text": "В этом докладе мы обсудим лучшие практики CI/CD, включая настройку автоматических тестов, деплой, мониторинг и роль DevOps в улучшении качества ПО."},
+        
+        {"title": "Monitoring and Observability in Modern DevOps", 
+         "description": "Как использовать мониторинг и инструменты наблюдаемости для управления системами и приложениями в DevOps.",
+         "text": "Доклад о мониторинге и наблюдаемости в рамках DevOps-подхода. Мы расскажем, как эффективно использовать современные инструменты для мониторинга систем и быстрого выявления проблем."},
+        
+        {"title": "Microservices in DevOps: Challenges and Solutions", 
+         "description": "Как внедрить и поддерживать микросервисы в рамках DevOps-подхода.",
+         "text": "Доклад о внедрении и поддержке микросервисной архитектуры в DevOps. Мы обсудим проблемы, с которыми сталкиваются команды при переходе на микросервисы, и как их решить."},
     ],
     
     "Strata Data Conference": [
-        {"title": "Data Engineering with Apache Kafka", "description": "Как использовать Apache Kafka для построения масштабируемых и высокоскоростных систем обработки данных."},
-        {"title": "Machine Learning for Big Data: Tools and Techniques", "description": "Обзор инструментов и методов для работы с большими данными и построения моделей машинного обучения."},
-        {"title": "Data Privacy and Ethics: Navigating the Modern Landscape", "description": "Как учитывать этические и правовые аспекты при работе с большими данными и машинным обучением."},
+        {"title": "Data Engineering with Apache Kafka", 
+         "description": "Как использовать Apache Kafka для построения масштабируемых и высокоскоростных систем обработки данных.",
+         "text": "Мы рассмотрим, как использовать Apache Kafka для построения масштабируемых решений для обработки данных в реальном времени, включая создание потоковых приложений."},
+        
+        {"title": "Machine Learning for Big Data: Tools and Techniques", 
+         "description": "Обзор инструментов и методов для работы с большими данными и построения моделей машинного обучения.",
+         "text": "Доклад о работе с большими данными, включая использование таких инструментов, как Apache Hadoop, Spark и других технологий для масштабирования обработки данных."},
+        
+        {"title": "Data Privacy and Ethics: Navigating the Modern Landscape", 
+         "description": "Как учитывать этические и правовые аспекты при работе с большими данными и машинным обучением.",
+         "text": "В этом докладе мы обсудим актуальные вопросы приватности данных, соблюдения этических норм и правовых аспектов при использовании машинного обучения и больших данных."},
     ],
 }
 
@@ -101,6 +183,11 @@ for conference in conferences:
         new_presentation = Presentation(name=presentation['title'],
                                         description=presentation['description'],
                                         conference_id=conf_id)
+        
+        mongo_presentations.insert_one({
+            'name': presentation['title'],
+            'pres_text': presentation['text']
+        })
         
         session.add(new_presentation)
 

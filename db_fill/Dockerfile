@@ -6,4 +6,5 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY ./db_fill/prescript.py /app/prescript.py
 COPY . .

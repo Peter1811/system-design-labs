@@ -5,6 +5,11 @@ class PresentationCreate(BaseModel):
     description: str
 
 
+class PresentationMongo(BaseModel):
+    name: str
+    text: str
+
+
 class UserCreate(BaseModel):
     first_name: str
     last_name: str

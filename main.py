@@ -1,16 +1,19 @@
 import jwt
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import Any, Union
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token, get_current_user_login
 from app.crud import confCRUD, presCRUD, userCRUD
 from app.db_config import SessionLocal
 from app.models import Conference, Presentation, User
-from app.schemas import PresentationCreate, UserCreate, UserLogin
+from app.mongo_config import mongo_presentations
+from app.schemas import PresentationCreate, PresentationMongo, UserCreate, UserLogin
 
 app = FastAPI()
 
@@ -174,6 +177,36 @@ def add_presentation_to_conference(presentation_name: int,
     db.refresh(presentation)
 
     return True
+
+
+@app.post('/add-presentation-with-text')
+def add_presentation_with_text(presentation_for_mongo: PresentationMongo = Body(...)):
+    new_pres = {'res': None}
+    if not mongo_presentations.find_one({'name': presentation_for_mongo.name}):
+        new_pres = {
+            'name': presentation_for_mongo.name,
+            'pres_text': presentation_for_mongo.text
+        }
+        mongo_presentations.insert_one(new_pres)
+        return new_pres
+
+    return new_pres
+
+
+@app.get('/get-presentation-with-text')
+def get_presentation_With_text(name: str):
+    pres = mongo_presentations.find_one({'name': name})
+    if pres:
+        return {k: pres[k] for k in pres if k != '_id'}
+    
+    return pres
+    
+
+@app.get('/test-mongo')
+def test_mongo():
+    pres = mongo_presentations.find_one({'name': 'Machine Learning for Big Data: Tools and Techniques'})
+    print(type(pres))
+    return {'pres': {k: pres[k] for k in pres if k != '_id'}}
 
 
 @app.get('/protected')
