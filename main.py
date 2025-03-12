@@ -118,9 +118,10 @@ def get_user_by_name(first_name: str, last_name: str,
     return user
 
 
-@app.post('/add_presentation')
 @check_if_token_is_valid
+@app.post('/add_presentation')
 def add_presentation(pres: PresentationCreate, 
+                     token: str,
                      db: Session = Depends(get_db)):
     '''
     Создание доклада и добавление в базу данных.
@@ -131,13 +132,17 @@ def add_presentation(pres: PresentationCreate,
     new_pres_data = {'name': pres.name,
                      'description': pres.description}
     
+    new_pres_data_for_mongo = {'name': pres.name,
+                               'text': pres.text}
+    
     try:
         new_pres = presCRUD.create(db, **new_pres_data)
+        print(new_pres)
     except IntegrityError:
         db.rollback()
         return {'error': 'Доклад с таким названием уже существует в базе данных'}
 
-    return new_pres or None
+    return {'added': new_pres}
 
 
 @app.get('/get_presentations')
