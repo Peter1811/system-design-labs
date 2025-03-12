@@ -6,24 +6,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import Any, Union
 from pymongo import MongoClient
+from pymongo.collection import Collection
 from pymongo.errors import ConnectionFailure
 
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token, get_current_user_login
 from app.crud import confCRUD, presCRUD, userCRUD
-from app.db_config import SessionLocal
+from app.db_config import get_db
 from app.models import Conference, Presentation, User
-from app.mongo_config import mongo_presentations
+from app.mongo_config import get_mongo
 from app.schemas import PresentationCreate, PresentationMongo, UserCreate, UserLogin
 
 app = FastAPI()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @app.get('/')
@@ -32,13 +25,13 @@ def main():
 
 
 def check_if_token_is_valid(func):
-    def wrapped_func(token):
+    def wrapped_func(token, *args, **kwargs):
         decoded_token = decode_access_token(token)
         print(token)
         if decoded_token.get('error'):
             return decoded_token
         
-        return func(decoded_token)
+        return func(decoded_token, *args, **kwargs)
     
     return wrapped_func
 
@@ -118,10 +111,12 @@ def get_user_by_name(first_name: str, last_name: str,
     return user
 
 
-@app.post('/add_presentation')
 @check_if_token_is_valid
-def add_presentation(pres: PresentationCreate, 
-                     db: Session = Depends(get_db)):
+@app.post('/add_presentation')
+def add_presentation(token: str,
+                    pres: PresentationCreate, 
+                    mongo_presentations: Collection = Depends(get_mongo),
+                    db: Session = Depends(get_db)):
     '''
     Создание доклада и добавление в базу данных.
     Если доклад с таким названием уже существует
@@ -136,12 +131,16 @@ def add_presentation(pres: PresentationCreate,
     except IntegrityError:
         db.rollback()
         return {'error': 'Доклад с таким названием уже существует в базе данных'}
+    
+    mongo_presentations.insert_one({'name': pres.name,
+                                    'pres_text': pres.text})
 
-    return new_pres or None
+    return new_pres_data or None
 
 
 @app.get('/get_presentations')
-def get_presentations(db: Session = Depends(get_db)):
+def get_presentations(db: Session = Depends(get_db), 
+                      mongo_presentations: Collection = Depends(get_mongo)):
     '''
     Получение списка всех добавленных докладов.
     '''
@@ -149,8 +148,22 @@ def get_presentations(db: Session = Depends(get_db)):
     presentations = db.query(Presentation).all()
     if len(presentations) == 0:
         return {'message': 'Докладов на данный момент не добавлено'}
+    
+    all_presentations = []
+    for pres in presentations:
+        pres_with_text = mongo_presentations.find_one({'name': pres.name})
+        new_pres = {}
+        if pres_with_text:
+            new_pres['name'] = pres.name
+            new_pres['description'] = pres.description
+            new_pres['text'] = pres_with_text['pres_text']
+            if pres.conference_id:
+                new_pres['conference'] = confCRUD.read(db, pres.conference_id)
 
-    return presentations
+        if new_pres:
+            all_presentations.append(new_pres)
+
+    return all_presentations
 
 
 @app.post('/add_pres_to_conf')
@@ -177,39 +190,3 @@ def add_presentation_to_conference(presentation_name: int,
     db.refresh(presentation)
 
     return True
-
-
-@app.post('/add-presentation-with-text')
-def add_presentation_with_text(presentation_for_mongo: PresentationMongo = Body(...)):
-    new_pres = {'res': None}
-    if not mongo_presentations.find_one({'name': presentation_for_mongo.name}):
-        new_pres = {
-            'name': presentation_for_mongo.name,
-            'pres_text': presentation_for_mongo.text
-        }
-        mongo_presentations.insert_one(new_pres)
-        return new_pres
-
-    return new_pres
-
-
-@app.get('/get-presentation-with-text')
-def get_presentation_With_text(name: str):
-    pres = mongo_presentations.find_one({'name': name})
-    if pres:
-        return {k: pres[k] for k in pres if k != '_id'}
-    
-    return pres
-    
-
-@app.get('/test-mongo')
-def test_mongo():
-    pres = mongo_presentations.find_one({'name': 'Machine Learning for Big Data: Tools and Techniques'})
-    print(type(pres))
-    return {'pres': {k: pres[k] for k in pres if k != '_id'}}
-
-
-@app.get('/protected')
-@check_if_token_is_valid
-def test(token: str):
-    return {'user': token}

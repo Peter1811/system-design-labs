@@ -1,8 +1,9 @@
 from app.auth import hash_password
 from app.db_config import SessionLocal
 from app.models import User, Presentation, Conference
-from app.mongo_config import mongo_presentations
+from app.mongo_config import mongo_client
 
+mongo_presentations = mongo_client['conference']['presentations']
 session = SessionLocal()
 
 # создание админа

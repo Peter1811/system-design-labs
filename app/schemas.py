@@ -3,6 +3,7 @@ from pydantic import BaseModel
 class PresentationCreate(BaseModel):
     name: str
     description: str
+    text: str
 
 
 class PresentationMongo(BaseModel):
