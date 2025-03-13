@@ -91,6 +91,16 @@ class ConferenceCRUD(BaseCRUD):
 
         conference = db.query(self.model).filter(self.model.name == name).first()
         return conference
+    
+    
+    def delete(self, db: Session, mongo_db, obj_id: int):
+        conference_to_delete = self.read(db, obj_id)
+        if conference_to_delete:
+            presentations = conference_to_delete.presentations
+            for presentation in presentations:
+                presentation.host_conference = None
+        
+
 
 
 class UserCRUD(BaseCRUD):
