@@ -135,7 +135,7 @@ def add_presentation(token: str,
     mongo_presentations.insert_one({'name': pres.name,
                                     'pres_text': pres.text})
 
-    return new_pres_data or None
+    return new_pres or None
 
 
 @app.get('/get_presentations')
@@ -190,3 +190,8 @@ def add_presentation_to_conference(presentation_name: int,
     db.refresh(presentation)
 
     return True
+
+
+@app.delete('/del_conf')
+def delete_conf(db: Session = Depends(get_db)):
+    confCRUD.delete(db, 1)
