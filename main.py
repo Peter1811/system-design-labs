@@ -27,11 +27,9 @@ def main():
 def check_if_token_is_valid(func):
     def wrapped_func(token, *args, **kwargs):
         decoded_token = decode_access_token(token)
-        print(token)
         if decoded_token.get('error'):
             return decoded_token
-        
-        return func(decoded_token, *args, **kwargs)
+        return func(token=decoded_token, *args, **kwargs)
     
     return wrapped_func
 
@@ -111,8 +109,8 @@ def get_user_by_name(first_name: str, last_name: str,
     return user
 
 
-@check_if_token_is_valid
 @app.post('/add_presentation')
+@check_if_token_is_valid
 def add_presentation(token: str,
                     pres: PresentationCreate, 
                     mongo_presentations: Collection = Depends(get_mongo),
@@ -161,19 +159,21 @@ def get_presentations(db: Session = Depends(get_db),
             new_pres['name'] = pres.name
             new_pres['description'] = pres.description
             new_pres['text'] = pres_with_text['pres_text']
-            if pres.conference_id:
-                new_pres['conference'] = confCRUD.read(db, pres.conference_id)
+            new_pres['conference'] = pres.host_conference
 
         if new_pres:
             all_presentations.append(new_pres)
+
+        # print(pres.name, pres.conference_id)
 
     return all_presentations
 
 
 @app.post('/add_pres_to_conf')
 @check_if_token_is_valid
-def add_presentation_to_conference(presentation_name: int,
-                                   conference_name: int,
+def add_presentation_to_conference(token: str,
+                                   presentation_name: str,
+                                   conference_name: str,
                                    db: Session = Depends(get_db)):
     '''
     Добавление доклада в конференцию.
@@ -198,4 +198,12 @@ def add_presentation_to_conference(presentation_name: int,
 
 @app.delete('/del_conf')
 def delete_conf(db: Session = Depends(get_db)):
-    confCRUD.delete(db, 1)
+    confCRUD.delete(db, 3)
+
+
+@app.get('/test')
+def get_conf_name(db: Session = Depends(get_db)):
+    pres = presCRUD.get_presentation_by_name(db, "Developing for ARKit: Building Augmented Reality Apps")
+    print(pres.conference_id, pres.host_conference.name)
+
+    return None

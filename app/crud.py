@@ -1,3 +1,4 @@
+from pymongo.collection import Collection
 from sqlalchemy.orm import Session
 from typing import Any
 
@@ -93,12 +94,23 @@ class ConferenceCRUD(BaseCRUD):
         return conference
     
     
-    def delete(self, db: Session, mongo_db, obj_id: int):
+    def delete(self, db: Session, obj_id: int):
+        '''
+        Удаление конференции: при удалении обнуляются ссылки
+        на данную конференцию у всех докладов, добавленных в
+        эту конференцию.
+        '''
+
         conference_to_delete = self.read(db, obj_id)
+        print(conference_to_delete.name)
         if conference_to_delete:
             presentations = conference_to_delete.presentations
             for presentation in presentations:
+                print(presentation.name)
                 presentation.host_conference = None
+        
+                db.add(presentation)
+            db.commit()
         
 
 
