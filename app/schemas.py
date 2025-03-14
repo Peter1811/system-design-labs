@@ -1,5 +1,11 @@
 from pydantic import BaseModel
 
+
+class ConferenceCreate(BaseModel):
+    name: str
+    description: str
+
+
 class PresentationCreate(BaseModel):
     name: str
     description: str

@@ -111,8 +111,9 @@ class ConferenceCRUD(BaseCRUD):
         '''
         Получение доклада по названию.
         Сначала проверяется, есть ли значение в кэше redis,
-        потом 
+        в случае отсутствия выполняется запрос к БД, записываем значение в кэш.
         '''
+
         redis_connection = next(get_redis())
         if redis_connection:
             redis_key = f'conference:name:{name}'

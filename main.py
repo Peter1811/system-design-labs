@@ -10,30 +10,23 @@ from pymongo.collection import Collection
 from pymongo.errors import ConnectionFailure
 
 from app.auth import hash_password, verify_password, create_access_token, decode_access_token, get_current_user_login
+from app.conf_post_router import router
 from app.crud import confCRUD, presCRUD, userCRUD
 from app.db_config import get_db
 from app.models import Conference, Presentation, User
 from app.mongo_config import get_mongo
 from app.redis_config import get_redis
 from app.schemas import PresentationCreate, PresentationMongo, UserCreate, UserLogin
+from app.utils import check_if_token_is_valid
 
 app = FastAPI()
+
+app.include_router(router, prefix='/post_kafka', tags=['conference'])
 
 
 @app.get('/')
 def main():
     return {'main page': 'main information'}
-
-
-def check_if_token_is_valid(func):
-    def wrapped_func(token, *args, **kwargs):
-        decoded_token = decode_access_token(token)
-        if decoded_token.get('error'):
-            return decoded_token
-        return func(token=decoded_token, *args, **kwargs)
-    
-    return wrapped_func
-
 
 
 @app.post('/create_user')
