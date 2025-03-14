@@ -14,6 +14,7 @@ from app.crud import confCRUD, presCRUD, userCRUD
 from app.db_config import get_db
 from app.models import Conference, Presentation, User
 from app.mongo_config import get_mongo
+from app.redis_config import get_redis
 from app.schemas import PresentationCreate, PresentationMongo, UserCreate, UserLogin
 
 app = FastAPI()
@@ -90,7 +91,9 @@ def get_user_by_login(login: str, db: Session = Depends(get_db)):
     if not user:
         return {'error': 'Пользователя с таким логином нет в базе данных'}
     
-    return user
+    return {'first_name': user.first_name,
+            'last_name': user.last_name,
+            'login': user.login}
 
 
 @app.get('/get_user_by_name')
@@ -100,13 +103,14 @@ def get_user_by_name(first_name: str, last_name: str,
     Поиск пользователя по маске имя и фамилия.
     '''
 
-    user = userCRUD.get_user_by_first_last_name(db, first_name, last_name)
+    users = userCRUD.get_users_by_first_last_name(db, first_name, last_name)
     
-    if not user:
-        return {'error': 'Пользователей с такими именем \
-                и фамилией нет в базе данных'}
+    if not users:
+        return {'error': 'Пользователей с такими именем и фамилией нет в базе данных'}
     
-    return user
+    return [{'first_name': user.first_name,
+            'last_name': user.last_name,
+            'login': user.login} for user in users]
 
 
 @app.post('/add_presentation')
@@ -129,13 +133,11 @@ def add_presentation(token: str,
     
     try:
         new_pres = presCRUD.create(db, **new_pres_data)
-        print(new_pres)
     except IntegrityError:
         db.rollback()
         return {'error': 'Доклад с таким названием уже существует в базе данных'}
     
-    mongo_presentations.insert_one({'name': pres.name,
-                                    'pres_text': pres.text})
+    mongo_presentations.insert_one(new_pres_data_for_mongo)
 
     return {'added': new_pres}
 
@@ -155,18 +157,33 @@ def get_presentations(db: Session = Depends(get_db),
     for pres in presentations:
         pres_with_text = mongo_presentations.find_one({'name': pres.name})
         new_pres = {}
+        new_pres['name'] = pres.name
+        new_pres['description'] = pres.description
         if pres_with_text:
-            new_pres['name'] = pres.name
-            new_pres['description'] = pres.description
             new_pres['text'] = pres_with_text['pres_text']
-            new_pres['conference'] = pres.host_conference
+        if pres.conference_id:
+            new_pres['conference'] = confCRUD.read(db, pres.conference_id)
 
         if new_pres:
             all_presentations.append(new_pres)
 
-        # print(pres.name, pres.conference_id)
+
 
     return all_presentations
+
+
+@app.get('/get_conferences')
+def get_conferences(db: Session = Depends(get_db)):
+    '''
+    Получение списка актуальных конференций (с докладами,
+    привязанными к конференции).
+    '''
+
+    conferences = db.query(Conference).all()
+
+    return [{'name': conference.name,
+             'description': conference.description,
+             'presentations': conference.presentations} for conference in conferences]
 
 
 @app.post('/add_pres_to_conf')
@@ -196,14 +213,20 @@ def add_presentation_to_conference(token: str,
     return True
 
 
-@app.delete('/del_conf')
-def delete_conf(db: Session = Depends(get_db)):
-    confCRUD.delete(db, 3)
+# @app.delete('/del_conf')
+# def delete_conf(db: Session = Depends(get_db)):
+#     confCRUD.delete(db, 4)
 
 
-@app.get('/test')
-def get_conf_name(db: Session = Depends(get_db)):
-    pres = presCRUD.get_presentation_by_name(db, "Developing for ARKit: Building Augmented Reality Apps")
-    print(pres.conference_id, pres.host_conference.name)
+# @app.get('/test_get')
+# def read_pres(db: Session = Depends(get_db)):
+#     res = presCRUD.get_presentation_by_name(db, 'Asynchronous Programming in Python: A Deep Dive')
+#     print(res.host_conference)
+#     return res
 
-    return None
+
+@app.get('/redis_test')
+def test_redis(db: Session = Depends(get_db), 
+               r = Depends(get_redis)):
+    res = confCRUD.get_conference_by_name(db, 'DockerCon')
+    return res

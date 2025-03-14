@@ -1,8 +1,12 @@
+import json
+
 from pymongo.collection import Collection
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from typing import Any
 
 from .models import Conference, Presentation, User
+from .redis_config import get_redis
 
 
 class BaseCRUD:
@@ -84,13 +88,44 @@ class ConferenceCRUD(BaseCRUD):
     def __init__(self):
         self.model = Conference
 
+
+    def read(self, db, obj_id):
+        redis_connection = next(get_redis())
+        if redis_connection:
+            redis_key = f'conference:name:{obj_id}'
+            redis_cached_data = redis_connection.get(redis_key)
+            if redis_cached_data:
+                return json.loads(redis_cached_data)
+
+            conference = db.query(self.model).get(obj_id)
+            if conference:
+                conference_dict = conference.__dict__
+                redis_connection.set(redis_key, json.dumps({k: conference_dict[k] 
+                                                            for k in conference_dict 
+                                                            if k != '_sa_instance_state'}), 3600)
+        return conference
+        
+
     
     def get_conference_by_name(self, db: Session, name: str):
         '''
         Получение доклада по названию.
+        Сначала проверяется, есть ли значение в кэше redis,
+        потом 
         '''
+        redis_connection = next(get_redis())
+        if redis_connection:
+            redis_key = f'conference:name:{name}'
+            redis_cached_data = redis_connection.get(redis_key)
+            if redis_cached_data:
+                return json.loads(redis_cached_data)
 
-        conference = db.query(self.model).filter(self.model.name == name).first()
+            conference = db.query(self.model).filter(self.model.name == name).first()
+            if conference:
+                conference_dict = conference.__dict__
+                redis_connection.set(redis_key, json.dumps({k: conference_dict[k] 
+                                                            for k in conference_dict 
+                                                            if k != '_sa_instance_state'}), 3600)
         return conference
     
     
@@ -102,17 +137,14 @@ class ConferenceCRUD(BaseCRUD):
         '''
 
         conference_to_delete = self.read(db, obj_id)
-        print(conference_to_delete.name)
         if conference_to_delete:
             presentations = conference_to_delete.presentations
             for presentation in presentations:
-                print(presentation.name)
-                presentation.host_conference = None
-        
-                db.add(presentation)
-            db.commit()
-        
+                curr_pres = presCRUD.read(db, presentation.id)
+                curr_pres.conference_id = None
 
+                db.add(curr_pres)
+            db.commit()
 
 
 class UserCRUD(BaseCRUD):
@@ -130,13 +162,12 @@ class UserCRUD(BaseCRUD):
         return user
     
 
-    def get_user_by_first_last_name(self, db: Session, first_name: str, last_name: str):
+    def get_users_by_first_last_name(self, db: Session, first_name: str, last_name: str):
         '''
         Получение пользователей по маске имя-фамилия.
         '''
 
-        users = db.query(self.model).filter(self.first_name == first_name \
-                                            & self.model.last_name == last_name).all()
+        users = db.query(self.model).filter(and_(self.model.first_name == first_name, self.model.last_name == last_name)).all()
         return users
 
 
