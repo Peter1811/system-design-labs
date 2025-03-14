@@ -94,7 +94,17 @@ services:
       - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka1:9092
       - KAFKA_CLUSTERS_0_NAME=kraft
 
-
+  read_kafka:
+    build: 
+      context: .
+      dockerfile: ./kafka_read/Dockerfile
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - postgres
     
 
 # Определение тома для постоянных данных PostgreSQL
