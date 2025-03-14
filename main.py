@@ -1,6 +1,6 @@
 import jwt
 
-from fastapi import FastAPI, Depends, Request, Body
+from fastapi import FastAPI, Depends, Request, Body, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -52,7 +52,8 @@ def register(user: UserCreate,
 
 
 @app.post('/login')
-def login_for_access_token(form_data: UserLogin = Depends(),
+def login_for_access_token(response: Response,
+                           form_data: UserLogin = Depends(),
                            db: Session = Depends(get_db)):
     '''
     Получение токена.
@@ -69,6 +70,8 @@ def login_for_access_token(form_data: UserLogin = Depends(),
         return {'error': 'Неверный пароль'}
     
     access_token = create_access_token({'sub': user.login})
+
+    response.set_cookie(key="current_token", value=access_token.replace('bearer', ''))
 
     return {'access_token': access_token, 'token_type': 'bearer'}
 
@@ -106,9 +109,10 @@ def get_user_by_name(first_name: str, last_name: str,
             'login': user.login} for user in users]
 
 
-@app.post('/add_presentation')
 @check_if_token_is_valid
-def add_presentation(token: str,
+@app.post('/add_presentation')
+def add_presentation(request: Request,
+                    #  token: str,
                     pres: PresentationCreate, 
                     mongo_presentations: Collection = Depends(get_mongo),
                     db: Session = Depends(get_db)):
@@ -117,6 +121,14 @@ def add_presentation(token: str,
     Если доклад с таким названием уже существует
     в базе данных, выдается сообщение об ошибке.
     '''
+
+    # token = request.cookies.get("current_token")
+    # if token:
+    #     decoded_token = decode_access_token(token)
+    #     if decoded_token.get('error'):
+    #         return decoded_token
+
+    #     print(token)
 
     new_pres_data = {'name': pres.name,
                      'description': pres.description}
@@ -179,10 +191,9 @@ def get_conferences(db: Session = Depends(get_db)):
              'presentations': conference.presentations} for conference in conferences]
 
 
-@app.post('/add_pres_to_conf')
 @check_if_token_is_valid
-def add_presentation_to_conference(token: str,
-                                   presentation_name: str,
+@app.post('/add_pres_to_conf')
+def add_presentation_to_conference(presentation_name: str,
                                    conference_name: str,
                                    db: Session = Depends(get_db)):
     '''

@@ -137,8 +137,13 @@ class ConferenceCRUD(BaseCRUD):
         эту конференцию.
         '''
 
+        redis_connection = next(get_redis())
         conference_to_delete = self.read(db, obj_id)
         if conference_to_delete:
+            redis_key = f'conference:id:{obj_id}'
+            redis_cached_data = redis_connection.get(redis_key)
+            if redis_cached_data:
+                redis_connection.delete(redis_key)
             presentations = conference_to_delete.presentations
             for presentation in presentations:
                 curr_pres = presCRUD.read(db, presentation.id)
